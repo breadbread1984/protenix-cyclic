@@ -11,6 +11,8 @@ RUN apt update
 
 RUN apt install -y python3 python3-pip
 
+RUN apt install -y libxrender1 libxext6 libx11-6 libgl1-mesa-glx
+
 RUN python3 -m pip install -r requirements.txt --break-system-packages
 
 RUN python3 setup.py build
