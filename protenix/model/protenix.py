@@ -510,6 +510,7 @@ class Protenix(nn.Module):
                 "profile",
                 "deletion_mean",
                 # "token_bonds",
+                "dists",
             ]:
                 keys_to_delete.append(key)
 

@@ -685,6 +685,98 @@ class Featurizer(object):
         ).long()  # [N_atom, N_atom]
         return mask_features
 
+    def normalize_cycle(self, cycle):
+        # 找到最小元素的位置
+        min_index = cycle.index(min(cycle))
+        # 重新排列，使最小元素位于起点
+        clockwise = cycle[min_index:] + cycle[:min_index]
+        # 逆时针排列，从最小元素开始（逆转方向）
+        counter_clockwise = cycle[min_index::-1] + cycle[:min_index:-1]
+        # 返回字典序较小的排列
+        return min(clockwise, counter_clockwise)
+
+    def find_cycles(self, adj_matrix):
+        num_nodes = adj_matrix.shape[0]
+        visited = set()  # 用于保存已经找到的环，避免重复
+        cycles = []
+
+        def dfs(node, start, path):
+            path.append(node)  # 将当前节点加入路径
+            for neighbor in range(num_nodes):
+                if adj_matrix[node, neighbor] > 0.:  # 如果存在边
+                    if neighbor == start and len(path) > 2:  # 如果回到起点且路径长度 > 2
+                        # 构造环，确保顺序一致，避免重复
+                        cycle = tuple(self.normalize_cycle(path))
+                        if cycle not in visited:
+                            visited.add(cycle)
+                            cycles.append(path[:])
+                    elif neighbor not in path:  # 如果未访问过该邻居
+                        dfs(neighbor, start, path)
+            path.pop()  # 回溯
+
+        # 遍历每个节点作为起点
+        for start in range(num_nodes):
+            dfs(start, start, [])
+
+        return cycles
+
+    def get_cyclic_dists(self, res_on_cycle, n_res):
+        assert max(res_on_cycle) < n_res
+        i = np.arange(len(res_on_cycle)) # i.shape = (n,)
+        # distances with other elements in this cycle
+        j0 = i
+        d1 = i[:, None] - j0[None, :] # (i - j0).shape = (n, n)
+        # distances with other elements in the next cycle
+        j1 = i + len(res_on_cycle)
+        d2 = i[:, None] - j1[None, :] # (i - j1).shape = (n, n)
+        # distances with other elements in the last cycle
+        j2 = i - len(res_on_cycle)
+        d3 = i[:, None] - j2[None, :] # (i - j2).shape = (n, n)
+        dists = np.stack([d1, d2, d3], axis = -1) # dists.shape = (n, n, 3)
+        index = np.argmin(np.abs(dists), axis = -1, keepdims = True) # index.shape = (n, n, 1)
+        signed_dists = np.squeeze(np.take_along_axis(dists, index, axis = -1), axis = -1) # signed_dists.shape = (n,n)
+        values = np.reshape(signed_dists, (-1,)) # values.shape = (n*n,)
+        rows = np.array(res_on_cycle) # rows.shape = (n)
+        cols = np.array(res_on_cycle) # rows.shape = (n)
+        cols, rows = np.meshgrid(cols, rows) # rows.shape = (n,n), cols.shape = (n,n)
+        cols = np.reshape(cols, (-1,)) # cols.shape = (n*n)
+        rows = np.reshape(rows, (-1,)) # rows.shape = (n*n)
+        signed_dists = np.full((n_res,n_res), np.inf)
+        signed_dists[rows,cols] = values #signed_dists = signed_dists.at[rows,cols].set(values)
+        return signed_dists
+
+    def shortest_signed_dist(self, adj):
+        n = adj.shape[0]
+        dist = np.full((n, n), np.inf, np.float32)
+        dist[np.diag_indices(n)] = 0 #dist = dist.at[np.diag_indices(n)].set(0)
+
+        def scan_step(d_prev, adj_pow, k):
+            adj_pow = np.matmul(adj_pow, adj)
+            update = np.where(adj_pow > 0, k, np.inf)
+            d_new = np.minimum(d_prev, update)
+            return d_new, adj_pow
+
+        adj_pow = np.eye(n) # power of adjacent matrix
+        for k in range(1,n):
+        dist, adj_pow = scan_step(dist, adj_pow, k)
+        mask = np.triu(dist, k = 1)
+        dist[mask > 0] *= -1
+        return dist
+
+    def get_relative_position(self, token_adj_matrix):
+        adj = token_adj_matrix.detach().cpu().numpy()
+        # 1) find all cycles
+        cycles = self.find_cycles(adj)
+        # 2) get signed cyclic dists of each cyccle
+        dists = np.full((adj.shape[0], adj.shape[1]), np.inf) # dists.shape = (n_res, n_res)
+        for cycle in cycles:
+            signed_dists = self.get_cyclic_dists(cycle, adj.shape[0])
+            dists = np.where(np.abs(signed_dists) < np.abs(dists), signed_dists, dists) # dists.shape = (n_res, n_res)
+        # 2) get unsigned minimum distances
+        linear_dists = self.shortest_signed_dist(adj)
+        dists = np.where(dists == np.inf, linear_dists, dists)
+        return {'dists': torch.from_numpy(dists)}
+
     def get_all_input_features(self):
         """
         Get input features from cropped data.
@@ -710,6 +802,9 @@ class Featurizer(object):
 
         mask_features = self.get_mask_features()
         features.update(mask_features)
+
+        dists_features = self.get_relative_position(features['token_bonds'])
+        features.update(dists_features)
         return features
 
     def get_labels(self) -> dict[str, torch.Tensor]:

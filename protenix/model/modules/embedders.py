@@ -155,6 +155,7 @@ class RelativePositionEncoding(nn.Module):
             entity_id = input_feature_dict["entity_id"]
             token_index = input_feature_dict["token_index"]
             sym_id = input_feature_dict["sym_id"]
+            dists = input_feature_dict["dists"] # cyclic relative position 
 
             b_same_chain = (
                 asym_id[..., :, None] == asym_id[..., None, :]
@@ -166,8 +167,7 @@ class RelativePositionEncoding(nn.Module):
                 entity_id[..., :, None] == entity_id[..., None, :]
             ).long()  # [..., N_token, N_token]
             d_residue = torch.clip(
-                input=residue_index[..., :, None]
-                - residue_index[..., None, :]
+                input=dists
                 + self.r_max,
                 min=0,
                 max=2 * self.r_max,
