@@ -12,7 +12,7 @@ class Predictor(object):
     self.model = model
     self.input_dir = input_dir
     self.output_dir = output_dir # output directory ends with gpu_id
-  def tojson(input_file):
+  def tojson(self, input_file):
     # run converter
     proc = subprocess.Popen([
       'protenix',
