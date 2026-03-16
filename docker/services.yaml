@@ -1,0 +1,14 @@
+version: '3'
+
+name: protenix-frontend
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    working_dir: /app
+    command: bash start_frontend.sh
+    ports:
+      - 8081:8081
+    restart: always
+
