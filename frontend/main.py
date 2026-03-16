@@ -21,6 +21,7 @@ from predictor import Predictor
 FLAGS = flags.FLAGS
 
 def add_options():
+  flags.DEFINE_integer('num_gpus', default = 4, help = 'number of gpus')
   flags.DEFINE_string("service_host", default = "0.0.0.0", help = 'service host')
   flags.DEFINE_integer("service_port", default = 8081, help = 'service port')
   flags.DEFINE_string('input_dir', default = '/root/px_input', help = 'path to input directory')
