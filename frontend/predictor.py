@@ -14,19 +14,21 @@ class Predictor(object):
     self.output_dir = output_dir # output directory ends with gpu_id
   def tojson(self, input_file):
     # run converter
-    proc = subprocess.Popen([
-      'protenix',
-      'json',
-      '--input',
-      input_file,
-      '--out_dir',
-      self.input_dir,
+    proc = subprocess.Popen(
+      [
+        'protenix',
+        'json',
+        '--input',
+        input_file,
+        '--out_dir',
+        self.input_dir,
+      ],
       stdout = subprocess.PIPE,
       stderr = subprocess.STDOUT,
       text = True,
       bufsize = 1,
       universal_newlines = True,
-    ])
+    )
     # wait the process to end
     try:
       while True:
