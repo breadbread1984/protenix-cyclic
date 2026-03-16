@@ -11,7 +11,7 @@ RUN apt update
 
 RUN apt install -y python3 python3-pip
 
-RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install -r requirements.txt --break-system-packages
 
 RUN python3 setup.py build
 
