@@ -763,8 +763,17 @@ class Featurizer(object):
         dist[mask > 0] *= -1
         return dist
 
-    def get_relative_position(self, token_adj_matrix):
+    def get_relative_position(self, token_adj_matrix, asym_id_pt, token_index_pt, residue_index_pt):
         adj = token_adj_matrix.detach().cpu().numpy()
+        asym_id = asym_id_pt.detach().cpu().numpy()
+        token_index = token_index_pt.detach().cpu().numpy()
+        residue_index = residue_index_pt.detach().cpu().numpy()
+        # 0) adjacent of extra bonds causing cyclic chain
+        same_chain = asym_id[:, None] == asym_id[None, :] # same chain
+        next_to_each_other = abs(token_index[:, None] - token_index[None, :]) == 1 # residues next to each other
+        is_poly = residue_index[:, None] != residue_index[None, :] # two residues that next to each other should have different res_ids
+        bonds_between_res = np.logical_and(np.logical_and(same_chain, next_to_each_other), is_poly).astype(adj.dtype) # bonds_between_res.shape = (n_res, n_res)
+        adj = np.maximum(adj, bonds_between_res)
         # 1) find all cycles
         cycles = self.find_cycles(adj)
         # 2) get signed cyclic dists of each cyccle
@@ -803,7 +812,7 @@ class Featurizer(object):
         mask_features = self.get_mask_features()
         features.update(mask_features)
 
-        dists_features = self.get_relative_position(features['token_bonds'])
+        dists_features = self.get_relative_position(features['token_bonds'], features['asym_id'], features['token_index'], features['residue_index'])
         features.update(dists_features)
         return features
 
