@@ -6,6 +6,7 @@ from os.path import abspath, dirname, exists, join, splitext, isdir, basename
 import tempfile
 import json
 import subprocess
+from protenix.data.inference.json_maker import cif_to_input_json
 
 class Predictor(object):
   def __init__(self, model, input_dir, output_dir,):
@@ -14,33 +15,11 @@ class Predictor(object):
     self.output_dir = output_dir # output directory ends with gpu_id
   def tojson(self, input_file):
     # run converter
-    proc = subprocess.Popen(
-      [
-        'protenix',
-        'json',
-        '--input',
-        input_file,
-        '--out_dir',
-        self.input_dir,
-      ],
-      stdout = subprocess.PIPE,
-      stderr = subprocess.STDOUT,
-      text = True,
-      bufsize = 1,
-      universal_newlines = True,
-    )
-    # wait the process to end
-    try:
-      while True:
-        output = proc.stdout.readline()
-        if output == '' and proc.poll() is not None:
-          break
-    except:
-      proc.kill()
-    # return converted file's path
-    stem, _ = splitext(input_file)
-    input_file = join(self.input_dir, f"{stem[:20]}.json") # NOTE: https://github.com/bytedance/Protenix/blob/main/runner/batch_inference.py#L1001
-    return input_file
+    fname = basename(input_file)
+    stem, ext = splitext(fname)
+    output_path = join(self.input_dir, stem + '.json')
+    cif_to_input_json(input_file, output_json = output_path, include_discont_poly_poly_bonds = True)
+    return output_path
   def predict(self, input_file, seed = 1, gpu_id = 0):
     assert exists(self.input_dir) and isdir(self.input_dir)
     assert exists(self.output_dir) and isdir(self.output_dir)
