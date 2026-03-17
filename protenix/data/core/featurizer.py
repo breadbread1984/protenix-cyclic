@@ -758,7 +758,7 @@ class Featurizer(object):
 
         adj_pow = np.eye(n) # power of adjacent matrix
         for k in range(1,n):
-        dist, adj_pow = scan_step(dist, adj_pow, k)
+            dist, adj_pow = scan_step(dist, adj_pow, k)
         mask = np.triu(dist, k = 1)
         dist[mask > 0] *= -1
         return dist
