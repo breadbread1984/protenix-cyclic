@@ -775,7 +775,7 @@ class Featurizer(object):
         # 2) get unsigned minimum distances
         linear_dists = self.shortest_signed_dist(adj)
         dists = np.where(dists == np.inf, linear_dists, dists)
-        return {'dists': torch.from_numpy(dists)}
+        return {'dists': torch.from_numpy(dists.astype(np.int64))}
 
     def get_all_input_features(self):
         """
