@@ -42,3 +42,4 @@ echo "总计目录：$(ls -d $OUTDIR/* | wc -l)"
 find "$OUTDIR" -name '*.cif.gz' -exec gunzip {} \;
 
 python3 scripts/gen_ccd_cache.py -c ccd_cache_dir -n 4
+python3 scripts/prepare_training_data.py -i "$OUTDIR" -o preprocessed_indices.csv -b preprocessed_dataset -c preprocessed_cluster.txt -n 4
