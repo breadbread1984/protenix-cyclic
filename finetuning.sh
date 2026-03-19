@@ -15,7 +15,7 @@ python3 runner/train.py \
 --checkpoint_interval 400 \
 --ema_decay 0.999 \
 --train_crop_size 384 \
---max_steps 1000000 \
+--max_steps 100000 \
 --warmup_steps 2000 \
 --lr 0.001 \
 --model.N_cycle 4 \
