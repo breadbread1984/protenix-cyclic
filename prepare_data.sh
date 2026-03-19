@@ -38,4 +38,7 @@ wait
 
 echo "✅ 同步完成！2021-2024 PDB数据在 $OUTDIR/"
 echo "总计目录：$(ls -d $OUTDIR/* | wc -l)"
-echo "解压所有：find $OUTDIR -name '*.cif.gz' -exec gunzip {} \\;"
+
+find "$OUTDIR" -name '*.cif.gz' -exec gunzip {} \;
+
+python3 scripts/gen_ccd_cache.py -c cache -n 4
