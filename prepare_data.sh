@@ -1,7 +1,8 @@
 #!/bin/bash
 export PROTENIX_ROOT_DIR=/home/xieyi/release_data
 bash scripts/database/download_pretenix_data.sh --full
-
+# inference once to download pretrained model
+protenix pred -i examples/input.json -o ./output -n protenix_base_default_v1.0.0
 """
 python3 scripts/prepare_training_data.py \
   -i mmcif \
