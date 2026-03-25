@@ -1,6 +1,6 @@
 #!/bin/bash
+export PROTENIX_ROOT_DIR=/home/xieyi/release_data
 bash scripts/database/download_pretenix_data.sh --full
-
 python3 scripts/prepare_training_data.py \
   -i mmcif \
   -o indices/weightedPDB_indices_before_2021-09-30_wo_posebusters_resolution_below_9.csv.gz \
