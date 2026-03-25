@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 runner/train.py \
+CUDA_VISIBLE_DEVICES=5,6 torchrun --nproc_per_node=2 runner/train.py \
 --model_name "protenix_base_default_v1.0.0" \
 --run_name protenix_finetune \
 --seed 42 \
