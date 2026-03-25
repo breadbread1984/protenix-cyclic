@@ -22,8 +22,8 @@ python3 runner/train.py \
 --sample_diffusion.N_step 20 \
 --triangle_attention "cuequivariance" \
 --triangle_multiplicative "cuequivariance" \
---load_checkpoint_path "${PROTENIX_ROOT_DIR}/protenix_base_default_v1.0.0.pt" \
---load_ema_checkpoint_path "${PROTENIX_ROOT_DIR}/protenix_base_default_v1.0.0.pt" \
+--load_checkpoint_path "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" \
+--load_ema_checkpoint_path "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" \
 --data.train_sets weightedPDB_before2109_wopb_nometalc_0925 \
 --data.weightedPDB_before2109_wopb_nometalc_0925.base_info.pdb_list examples/finetune_subset.txt \
 --data.test_sets recentPDB_1536_sample384_0925,posebusters_0925
