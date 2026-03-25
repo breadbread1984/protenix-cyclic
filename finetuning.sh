@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python3 runner/train.py \
---model_name "protenix_cyclic_default_v1.0.0" \
+--model_name "protenix_base_default_v1.0.0" \
 --run_name protenix_finetune \
 --seed 42 \
 --base_dir ./ckpt_20260319 \
