@@ -756,16 +756,18 @@ class Featurizer(object):
         dist[mask > 0] *= -1
         return dist
 
-    def get_relative_position(self, token_adj_matrix, asym_id_pt, token_index_pt, residue_index_pt, is_protein_pt, is_ligand_pt, is_dna_pt, is_rna_pt):
+    def get_relative_position(self, token_adj_matrix, asym_id_pt, token_index_pt, residue_index_pt,):
         adj = token_adj_matrix.detach().cpu().numpy()
         asym_id = asym_id_pt.detach().cpu().numpy()
         token_index = token_index_pt.detach().cpu().numpy()
         residue_index = residue_index_pt.detach().cpu().numpy()
-        is_protein = is_protein_pt.detach().cpu().numpy()
-        is_ligand = is_ligand_pt.detach().cpu().numpy()
-        is_dna = is_dna_pt.detach().cpu().numpy()
-        is_rna = is_rna_pt.detach().cpu().numpy()
-        is_poly = is_protein | is_dna | is_rna
+        is_poly = []
+        res_starts = get_residue_starts(self.cropped_atom_array, add_exclusive_stop=True)
+        for start,stop in zip(res_starts[:-1], res_starts[1:]):
+            res_mol_type = self.cropped_atom_array.mol_type[start]
+            if res_mol_type != "ligand": is_poly.append(False)
+            else: is_poly.append(True)
+        is_poly = np.array(is_poly)
         # 0) adjacent of extra bonds causing cyclic chain
         same_chain = asym_id[:, None] == asym_id[None, :] # same chain
         next_to_each_other = abs(token_index[:, None] - token_index[None, :]) == 1 # residues next to each other
@@ -816,11 +818,7 @@ class Featurizer(object):
             features['token_bonds'], 
             features['asym_id'], 
             features['token_index'], 
-            features['residue_index'], 
-            features["is_protein"], 
-            features["is_ligand"],
-            features["is_dna"],
-            features["is_rna"]
+            features['residue_index'],
         )
         features.update(dists_features)
         return features
