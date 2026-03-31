@@ -770,7 +770,7 @@ class Featurizer(object):
         same_chain = asym_id[:, None] == asym_id[None, :] # same chain
         next_to_each_other = abs(token_index[:, None] - token_index[None, :]) == 1 # residues next to each other
         between_poly = is_poly[:, None] & is_poly[None, :] # only between polymer residues
-        bonds_between_res = np.logical_and(np.logical_and(same_chain, next_to_each_other), between_poly).astype(adj.dtype) # bonds_between_res.shape = (n_res, n_res)
+        bonds_between_res = (same_chain & next_to_each_other & between_poly).astype(adj.dtype) # bonds_between_res.shape = (n_res, n_res)
         adj = np.maximum(adj, bonds_between_res)
         # 1) find all cycles
         cycles = self.find_cycles(adj)
