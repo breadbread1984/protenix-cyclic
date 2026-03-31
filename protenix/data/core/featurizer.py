@@ -765,7 +765,7 @@ class Featurizer(object):
         res_starts = get_residue_starts(self.cropped_atom_array, add_exclusive_stop=True)
         for start,stop in zip(res_starts[:-1], res_starts[1:]):
             res_mol_type = self.cropped_atom_array.mol_type[start]
-            if res_mol_type != "ligand": is_poly.append(False)
+            if res_mol_type == "ligand": is_poly.append(False)
             else: is_poly.append(True)
         is_poly = np.array(is_poly)
         # 0) adjacent of extra bonds causing cyclic chain
