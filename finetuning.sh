@@ -17,7 +17,7 @@ CUDA_VISIBLE_DEVICES=5,6 torchrun --nproc_per_node=2 runner/train.py \
 --train_crop_size 768 \
 --max_steps 100000 \
 --warmup_steps 2000 \
---lr 0.001 \
+--lr 0.0001 \
 --model.N_cycle 4 \
 --sample_diffusion.N_step 20 \
 --triangle_attention "cuequivariance" \
@@ -25,6 +25,6 @@ CUDA_VISIBLE_DEVICES=5,6 torchrun --nproc_per_node=2 runner/train.py \
 --load_checkpoint_path "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" \
 --load_ema_checkpoint_path "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" \
 --data.train_sets weightedPDB_before2109_wopb_nometalc_0925 \
---data.weightedPDB_before2109_wopb_nometalc_0925.base_info.pdb_list examples/finetune_subset.txt \
+--data.weightedPDB_before2109_wopb_nometalc_0925.base_info.pdb_list filename_list.txt \
 --data.test_sets recentPDB_1536_sample384_0925,posebusters_0925
 
