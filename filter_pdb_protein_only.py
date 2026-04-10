@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from tqdm import tqdm
 from absl import flags, app
 from os import environ, listdir
 from os.path import join, splitext
@@ -47,7 +48,7 @@ def add_options():
 def main(unused_argv):
   mmcif_dir = join(environ['PROTENIX_ROOT_DIR'], "mmcif")
   cifs = list()
-  for cif in listdir(mmcif_dir):
+  for cif in tqdm(listdir(mmcif_dir)):
     stem, ext = splitext(cif)
     if ext != '.cif': continue
     if is_pure_protein_cif(join(mmcif_dir, cif)):
