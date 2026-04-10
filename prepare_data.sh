@@ -4,7 +4,7 @@ bash scripts/database/download_pretenix_data.sh --full
 # inference once to download pretrained model
 protenix pred -i examples/input.json -o ./output -n protenix_base_default_v1.0.0
 # generate finetuning list
-python3 filter_pdb_protein_only.py --output filename_list.txt 
+python3 filter_pdb_protein_only.py --output filename_list.txt --processes 32 --timeout 300
 """
 python3 scripts/prepare_training_data.py \
   -i mmcif \
