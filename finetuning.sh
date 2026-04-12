@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUDA_VISIBLE_DEVICES=5,6 torchrun --nproc_per_node=2 runner/train.py \
+CUDA_VISIBLE_DEVICES=4,5,6,7 torchrun --nproc_per_node=4 runner/train.py \
 --model_name "protenix_base_default_v1.0.0" \
 --run_name protenix_finetune \
 --seed 42 \
@@ -9,12 +9,12 @@ CUDA_VISIBLE_DEVICES=5,6 torchrun --nproc_per_node=2 runner/train.py \
 --project protenix \
 --use_wandb true \
 --diffusion_batch_size 48 \
---eval_interval 400 \
+--eval_interval 100000 \
 --log_interval 50 \
 --eval_first false \
 --checkpoint_interval 400 \
 --ema_decay 0.999 \
---train_crop_size 768 \
+--train_crop_size 384 \
 --max_steps 100000 \
 --warmup_steps 2000 \
 --lr 0.0001 \
