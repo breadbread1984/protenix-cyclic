@@ -8,7 +8,7 @@ CUDA_VISIBLE_DEVICES=4,5,6,7 torchrun --nproc_per_node=4 runner/train.py \
 --dtype bf16 \
 --project protenix \
 --use_wandb true \
---diffusion_batch_size 48 \
+--diffusion_batch_size 12 \
 --eval_interval 100000 \
 --log_interval 50 \
 --eval_first false \
