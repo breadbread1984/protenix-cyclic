@@ -18,3 +18,4 @@ freeze_trunk: true   # 冻结主干！只训练 PAE 头
 
 but current configuration can only support crop_size: 384, no need for phase 2. just phase 1 and 3
 
+NOTE: must update **load_checkpoint_path** in the config file
