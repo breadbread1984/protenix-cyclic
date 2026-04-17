@@ -28,4 +28,5 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --data.weightedPDB_before2109_wopb_nometalc_0925.base_info.pdb_list filename_list.txt \
 --data.test_sets recentPDB_1536_sample384_0925,posebusters_0925 \
 --finetune_params_with_substring="['confidence']" \
---loss.weight.alpha_pae=1.0
+--loss.weight.alpha_pae=1.0 \
+--loss.weight.alpha_confidence=1.0
