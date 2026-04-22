@@ -2,9 +2,9 @@
 
 CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --model_name "protenix_base_default_v1.0.0" \
---run_name protenix_finetune_phase1 \
+--run_name protenix_finetune_phase3 \
 --seed 42 \
---base_dir ./finetuning_phase1 \
+--base_dir ./finetuning_phase3 \
 --dtype bf16 \
 --project protenix \
 --use_wandb true \
@@ -14,22 +14,23 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --eval_first false \
 --checkpoint_interval 400 \
 --ema_decay 0.999 \
---train_crop_size 640 \
---max_steps 15000 \
---warmup_steps 1000 \
---lr 0.005 \
+--train_crop_size 768 \
+--max_steps 4000 \
+--warmup_steps 200 \
+--lr 0.00001 \
 --model.N_cycle 4 \
 --sample_diffusion.N_step 20 \
 --triangle_attention "cuequivariance" \
 --triangle_multiplicative "cuequivariance" \
---load_checkpoint_path "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" \
---load_ema_checkpoint_path "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" \
+--load_checkpoint_path <to be filled> \
+--load_ema_checkpoint_path <to be filled> \
 --data.train_sets weightedPDB_before2109_wopb_nometalc_0925 \
 --data.weightedPDB_before2109_wopb_nometalc_0925.base_info.pdb_list filename_list.txt \
 --data.test_sets recentPDB_1536_sample384_0925,posebusters_0925 \
---finetune_params_with_substring="['trunk', 'pairformer', 'msaformer', 'diffusion']" \
+--finetune_params_with_substring="['confidence']" \
+--train_confidence_only=true \
 --loss.weight.smooth_lddt=0.0 \
---loss.weight.alpha_bond=1.0 \
---loss.weight.alpha_pae=0.0 \
---loss.weight.alpha_confidence=0.0 \
---loss.weight.alpha_diffusion=4.0
+--loss.weight.alpha_bond=0.0 \
+--loss.weight.alpha_pae=1.0 \
+--loss.weight.alpha_confidence=1.0 \
+--loss.weight.alpha_diffusion=0.0
