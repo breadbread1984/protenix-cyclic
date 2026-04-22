@@ -14,7 +14,7 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --eval_first false \
 --checkpoint_interval 400 \
 --ema_decay 0.999 \
---train_crop_size 640 \
+--train_crop_size 648 \
 --max_steps 15000 \
 --warmup_steps 1000 \
 --lr 0.005 \
