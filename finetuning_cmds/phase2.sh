@@ -9,13 +9,13 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --project protenix \
 --use_wandb true \
 --diffusion_batch_size 4 \
---eval_interval 10000 \
+--eval_interval 30000 \
 --log_interval 50 \
 --eval_first false \
 --checkpoint_interval 400 \
 --ema_decay 0.999 \
 --train_crop_size 768 \
---max_steps 10000 \
+--max_steps 30000 \
 --warmup_steps 500 \
 --lr 0.00001 \
 --model.N_cycle 4 \
