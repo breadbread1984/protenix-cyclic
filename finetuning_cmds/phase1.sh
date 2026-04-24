@@ -8,13 +8,13 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --dtype bf16 \
 --project protenix \
 --use_wandb true \
---diffusion_batch_size 4 \
+--diffusion_batch_size 32 \
 --eval_interval 60000 \
 --log_interval 50 \
 --eval_first false \
 --checkpoint_interval 400 \
 --ema_decay 0.999 \
---train_crop_size 648 \
+--train_crop_size 640 \
 --max_steps 60000 \
 --warmup_steps 1000 \
 --lr 0.005 \
@@ -27,9 +27,10 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --data.train_sets weightedPDB_before2109_wopb_nometalc_0925 \
 --data.weightedPDB_before2109_wopb_nometalc_0925.base_info.pdb_list filename_list.txt \
 --data.test_sets recentPDB_1536_sample384_0925,posebusters_0925 \
---finetune_params_with_substring="['trunk','pairformer','msaformer','diffusion']" \
 --loss.weight.smooth_lddt=0.0 \
 --loss.weight.alpha_bond=1.0 \
 --loss.weight.alpha_pae=0.0 \
---loss.weight.alpha_confidence=0.0 \
---loss.weight.alpha_diffusion=4.0
+--loss.weight.alpha_confidence=0.0001 \
+--loss.weight.alpha_diffusion=4.0 \
+--loss.weight.alpha_distogram=0.03 \
+--train_confidence_only=False
