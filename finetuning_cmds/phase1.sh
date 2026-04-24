@@ -33,4 +33,4 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --loss.weight.alpha_confidence=0.0001 \
 --loss.weight.alpha_diffusion=4.0 \
 --loss.weight.alpha_distogram=0.03 \
---train_confidence_only=False
+--train_confidence_only=false
