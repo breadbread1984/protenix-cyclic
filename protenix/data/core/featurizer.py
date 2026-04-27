@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 from typing import Optional, Union
 
 import numpy as np
@@ -24,6 +25,45 @@ from protenix.data.constants import get_all_elems, STD_RESIDUES, STD_RESIDUES_WI
 from protenix.data.tokenizer import Token, TokenArray
 from protenix.data.utils import get_atom_level_token_mask, get_ligand_polymer_bond_mask
 from protenix.utils.geometry import angle_3p, random_transform
+
+
+def _normalize_cycle(cycle):
+    """Normalize a cycle by finding the lexicographically smallest rotation."""
+    min_index = cycle.index(min(cycle))
+    clockwise = cycle[min_index:] + cycle[:min_index]
+    counter_clockwise = cycle[min_index::-1] + cycle[:min_index:-1]
+    return min(clockwise, counter_clockwise)
+
+
+def _dfs_from_start(start, adj_matrix, max_cycle_length):
+    """
+    Perform DFS from a single starting node to find all cycles.
+    This is a module-level function to support multiprocessing.
+    """
+    num_nodes = adj_matrix.shape[0]
+    local_visited = set()
+    cycles = []
+    
+    stack = [(start, start, [])]
+    
+    while stack:
+        node, start, path = stack.pop()
+        path = path + [node]
+        
+        if len(path) >= max_cycle_length:
+            continue
+        
+        for neighbor in range(num_nodes):
+            if adj_matrix[node, neighbor] > 0.:
+                if neighbor == start and len(path) > 2:
+                    cycle = tuple(_normalize_cycle(path))
+                    if cycle not in local_visited:
+                        local_visited.add(cycle)
+                        cycles.append(path[:])
+                elif neighbor not in path:
+                    stack.append((neighbor, start, path))
+    
+    return cycles
 
 
 class Featurizer(object):
@@ -682,57 +722,52 @@ class Featurizer(object):
         ).long()  # [N_atom, N_atom]
         return mask_features
 
-    def normalize_cycle(self, cycle):
-        # 找到最小元素的位置
-        min_index = cycle.index(min(cycle))
-        # 重新排列，使最小元素位于起点
-        clockwise = cycle[min_index:] + cycle[:min_index]
-        # 逆时针排列，从最小元素开始（逆转方向）
-        counter_clockwise = cycle[min_index::-1] + cycle[:min_index:-1]
-        # 返回字典序较小的排列
-        return min(clockwise, counter_clockwise)
-
-    def find_cycles(self, adj_matrix):
+    def find_cycles(self, adj_matrix, max_workers=None):
         """
-        Find all cycles in the adjacency matrix using iterative DFS.
+        Find all cycles in the adjacency matrix using parallel DFS.
         
         Args:
             adj_matrix: Adjacency matrix representing the graph.
-            r_max: Maximum relative position index.环上任意两点最大距离为 floor(n/2),
-                  所以要使环有意义需要 n <= 2 * r_max + 1。如果为 None，使用 self.max_cycle_length。
+            max_workers: Maximum number of worker processes. If None, uses os.cpu_count().
         """
-        # 计算最大环长度：如果 r_max=32，则 max_cycle_length=65
-        max_cycle_length = self.max_cycle_length    
+        import os
+        
+        max_cycle_length = self.max_cycle_length
         num_nodes = adj_matrix.shape[0]
-        visited = set()  # 用于保存已经找到的环，避免重复
-        cycles = []
-
-        # 遍历每个节点作为起点
-        for start in range(num_nodes):
-            # 堆栈元素: (node, start, path)
-            # node: 当前节点, start: 起点, path: 从start到node的路径
-            stack = [(start, start, [])]
+        
+        # 并行处理每个起始节点
+        workers = max_workers or min(os.cpu_count(), num_nodes)
+        
+        if workers > 1 and num_nodes > 10:
+            # 并行模式
+            with ProcessPoolExecutor(max_workers=workers) as executor:
+                results = list(executor.map(
+                    lambda start: _dfs_from_start(start, adj_matrix, max_cycle_length),
+                    range(num_nodes)
+                ))
             
-            while stack:
-                node, start, path = stack.pop()
-                path = path + [node]  # 将当前节点加入路径
-                
-                # 跳过超过最大长度的路径（减少搜索空间）
-                if len(path) >= max_cycle_length:
-                    continue
-                
-                for neighbor in range(num_nodes):
-                    if adj_matrix[node, neighbor] > 0.:  # 如果存在边
-                        if neighbor == start and len(path) > 2:  # 如果回到起点且路径长度 > 2
-                            # 构造环，确保顺序一致，避免重复
-                            cycle = tuple(self.normalize_cycle(path))
-                            if cycle not in visited:
-                                visited.add(cycle)
-                                cycles.append(path[:])
-                        elif neighbor not in path:  # 如果未访问过该邻居
-                            stack.append((neighbor, start, path))
-
-        return cycles
+            # 合并所有结果并去重
+            all_cycles = []
+            seen = set()
+            for cycles in results:
+                for cycle in cycles:
+                    normalized = tuple(_normalize_cycle(cycle))
+                    if normalized not in seen:
+                        seen.add(normalized)
+                        all_cycles.append(cycle)
+            return all_cycles
+        else:
+            # 串行模式（节点数较少时）
+            visited = set()
+            cycles = []
+            for start in range(num_nodes):
+                result = _dfs_from_start(start, adj_matrix, max_cycle_length)
+                for cycle in result:
+                    normalized = tuple(_normalize_cycle(cycle))
+                    if normalized not in visited:
+                        visited.add(normalized)
+                        cycles.append(cycle)
+            return cycles
 
     def get_cyclic_dists(self, res_on_cycle, n_res):
         assert max(res_on_cycle) < n_res
