@@ -693,23 +693,26 @@ class Featurizer(object):
         visited = set()  # 用于保存已经找到的环，避免重复
         cycles = []
 
-        def dfs(node, start, path):
-            path.append(node)  # 将当前节点加入路径
-            for neighbor in range(num_nodes):
-                if adj_matrix[node, neighbor] > 0.:  # 如果存在边
-                    if neighbor == start and len(path) > 2:  # 如果回到起点且路径长度 > 2
-                        # 构造环，确保顺序一致，避免重复
-                        cycle = tuple(self.normalize_cycle(path))
-                        if cycle not in visited:
-                            visited.add(cycle)
-                            cycles.append(path[:])
-                    elif neighbor not in path:  # 如果未访问过该邻居
-                        dfs(neighbor, start, path)
-            path.pop()  # 回溯
-
         # 遍历每个节点作为起点
         for start in range(num_nodes):
-            dfs(start, start, [])
+            # 堆栈元素: (node, start, path)
+            # node: 当前节点, start: 起点, path: 从start到node的路径
+            stack = [(start, start, [])]
+            
+            while stack:
+                node, start, path = stack.pop()
+                path = path + [node]  # 将当前节点加入路径
+                
+                for neighbor in range(num_nodes):
+                    if adj_matrix[node, neighbor] > 0.:  # 如果存在边
+                        if neighbor == start and len(path) > 2:  # 如果回到起点且路径长度 > 2
+                            # 构造环，确保顺序一致，避免重复
+                            cycle = tuple(self.normalize_cycle(path))
+                            if cycle not in visited:
+                                visited.add(cycle)
+                                cycles.append(path[:])
+                        elif neighbor not in path:  # 如果未访问过该邻居
+                            stack.append((neighbor, start, path))
 
         return cycles
 
