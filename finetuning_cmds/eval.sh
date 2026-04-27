@@ -11,4 +11,5 @@ torchrun --nproc_per_node=4 runner/train.py \
 	--base_dir ./eval_output \
 	--run_name eval_only \
 	--dtype bf16 \
-	--eval_ema_only true
+	--use_ema false \
+	--eval_ema_only false
