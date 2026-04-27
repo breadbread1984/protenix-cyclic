@@ -35,6 +35,8 @@ class Featurizer(object):
         lig_atom_rename (bool): Boolean indicating whether rename atom name for ligand atoms
         include_discont_poly_poly_bonds (bool): Boolean indicating whether
                                         include discontinuous polymer-polymer bonds
+        r_max (int): Maximum relative position index. Used to limit the maximum cycle length
+                     in find_cycles to (2 * r_max + 1). Defaults to 32.
     """
 
     def __init__(
@@ -44,6 +46,7 @@ class Featurizer(object):
         ref_pos_augment: bool = True,
         lig_atom_rename: bool = False,
         include_discont_poly_poly_bonds: bool = False,
+        r_max: int = 32,
     ) -> None:
         self.cropped_token_array = cropped_token_array
 
@@ -51,6 +54,7 @@ class Featurizer(object):
         self.ref_pos_augment = ref_pos_augment
         self.lig_atom_rename = lig_atom_rename
         self.include_discont_poly_poly_bonds = include_discont_poly_poly_bonds
+        self.max_cycle_length = 2 * r_max + 1  # 环上任意两点最大距离为 floor(n/2)
 
     @staticmethod
     def encoder(
@@ -689,6 +693,16 @@ class Featurizer(object):
         return min(clockwise, counter_clockwise)
 
     def find_cycles(self, adj_matrix):
+        """
+        Find all cycles in the adjacency matrix using iterative DFS.
+        
+        Args:
+            adj_matrix: Adjacency matrix representing the graph.
+            r_max: Maximum relative position index.环上任意两点最大距离为 floor(n/2),
+                  所以要使环有意义需要 n <= 2 * r_max + 1。如果为 None，使用 self.max_cycle_length。
+        """
+        # 计算最大环长度：如果 r_max=32，则 max_cycle_length=65
+        max_cycle_length = self.max_cycle_length    
         num_nodes = adj_matrix.shape[0]
         visited = set()  # 用于保存已经找到的环，避免重复
         cycles = []
@@ -702,6 +716,10 @@ class Featurizer(object):
             while stack:
                 node, start, path = stack.pop()
                 path = path + [node]  # 将当前节点加入路径
+                
+                # 跳过超过最大长度的路径（减少搜索空间）
+                if len(path) >= max_cycle_length:
+                    continue
                 
                 for neighbor in range(num_nodes):
                     if adj_matrix[node, neighbor] > 0.:  # 如果存在边
