@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Union
 
 import numpy as np
@@ -739,8 +739,8 @@ class Featurizer(object):
         workers = max_workers or min(os.cpu_count(), num_nodes)
         
         if workers > 1 and num_nodes > 10:
-            # 并行模式
-            with ProcessPoolExecutor(max_workers=workers) as executor:
+            # 并行模式（使用线程池，避免 daemon 进程无法创建子进程的问题）
+            with ThreadPoolExecutor(max_workers=workers) as executor:
                 results = list(executor.map(
                     lambda start: _dfs_from_start(start, adj_matrix, max_cycle_length),
                     range(num_nodes)
