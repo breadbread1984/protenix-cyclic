@@ -33,10 +33,10 @@ def _normalize_cycle(cycle):
     counter_clockwise = cycle[min_index::-1] + cycle[:min_index:-1]
     return min(clockwise, counter_clockwise)
 
-
 def _tarjan_scc(adj_list):
     """
     Tarjan's algorithm to find all Strongly Connected Components (SCCs).
+    Iterative implementation using explicit stack to avoid recursion limit.
     
     Args:
         adj_list: Adjacency list representation of the graph.
@@ -46,42 +46,62 @@ def _tarjan_scc(adj_list):
     """
     n = len(adj_list)
     index_counter = [0]
-    stack = []
+    scc_stack = []  # Nodes in current DFS path
     lowlink = {}
     index = {}
     on_stack = {}
     sccs = []
     
-    def strongconnect(node):
-        index[node] = index_counter[0]
-        lowlink[node] = index_counter[0]
-        index_counter[0] += 1
-        stack.append(node)
-        on_stack[node] = True
-        
-        for neighbor in adj_list[node]:
-            if neighbor not in index:
-                strongconnect(neighbor)
-                lowlink[node] = min(lowlink[node], lowlink[neighbor])
-            elif on_stack.get(neighbor, False):
-                lowlink[node] = min(lowlink[node], index[neighbor])
-        
-        if lowlink[node] == index[node]:
-            scc = []
-            while True:
-                w = stack.pop()
-                on_stack[w] = False
-                scc.append(w)
-                if w == node:
-                    break
-            sccs.append(scc)
+    # Stack frames: (node, neighbor_iter, state)
+    # state: 0 = initial visit, 1 = processing neighbors
+    dfs_stack = []
     
-    for node in range(n):
-        if node not in index:
-            strongconnect(node)
+    for start_node in range(n):
+        if start_node in index:
+            continue
+        
+        dfs_stack.append((start_node, 0, 0))
+        
+        while dfs_stack:
+            node, iter_pos, state = dfs_stack.pop()
+            neighbors = adj_list[node]
+            
+            if state == 0:
+                # First time visiting this node
+                index[node] = index_counter[0]
+                lowlink[node] = index_counter[0]
+                index_counter[0] += 1
+                scc_stack.append(node)
+                on_stack[node] = True
+                # Push back to process neighbors
+                dfs_stack.append((node, 0, 1))
+            else:
+                # Processing neighbors / done
+                while iter_pos < len(neighbors):
+                    neighbor = neighbors[iter_pos]
+                    iter_pos += 1
+                    
+                    if neighbor not in index:
+                        # Push current node back with updated iter_pos
+                        dfs_stack.append((node, iter_pos, 1))
+                        # Push neighbor to visit first
+                        dfs_stack.append((neighbor, 0, 0))
+                        break
+                    elif on_stack.get(neighbor, False):
+                        lowlink[node] = min(lowlink[node], index[neighbor])
+                else:
+                    # All neighbors processed, update lowlink and check for SCC root
+                    if lowlink[node] == index[node]:
+                        scc = []
+                        while True:
+                            w = scc_stack.pop()
+                            on_stack[w] = False
+                            scc.append(w)
+                            if w == node:
+                                break
+                        sccs.append(scc)
     
     return sccs
-
 
 def _johnson_cycles(adj_list, max_cycle_length):
     """
