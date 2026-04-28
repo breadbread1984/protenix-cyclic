@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Union
 
 import numpy as np
@@ -35,35 +34,123 @@ def _normalize_cycle(cycle):
     return min(clockwise, counter_clockwise)
 
 
-def _dfs_from_start(start, adj_matrix, max_cycle_length):
+def _tarjan_scc(adj_list):
     """
-    Perform DFS from a single starting node to find all cycles.
-    This is a module-level function to support multiprocessing.
-    """
-    num_nodes = adj_matrix.shape[0]
-    local_visited = set()
-    cycles = []
+    Tarjan's algorithm to find all Strongly Connected Components (SCCs).
     
-    stack = [(start, start, [])]
-    
-    while stack:
-        node, start, path = stack.pop()
-        path = path + [node]
+    Args:
+        adj_list: Adjacency list representation of the graph.
         
-        if len(path) >= max_cycle_length:
+    Returns:
+        List of SCCs, each SCC is a list of nodes.
+    """
+    n = len(adj_list)
+    index_counter = [0]
+    stack = []
+    lowlink = {}
+    index = {}
+    on_stack = {}
+    sccs = []
+    
+    def strongconnect(node):
+        index[node] = index_counter[0]
+        lowlink[node] = index_counter[0]
+        index_counter[0] += 1
+        stack.append(node)
+        on_stack[node] = True
+        
+        for neighbor in adj_list[node]:
+            if neighbor not in index:
+                strongconnect(neighbor)
+                lowlink[node] = min(lowlink[node], lowlink[neighbor])
+            elif on_stack.get(neighbor, False):
+                lowlink[node] = min(lowlink[node], index[neighbor])
+        
+        if lowlink[node] == index[node]:
+            scc = []
+            while True:
+                w = stack.pop()
+                on_stack[w] = False
+                scc.append(w)
+                if w == node:
+                    break
+            sccs.append(scc)
+    
+    for node in range(n):
+        if node not in index:
+            strongconnect(node)
+    
+    return sccs
+
+
+def _johnson_cycles(adj_list, max_cycle_length):
+    """
+    Johnson's algorithm to find all elementary cycles in a graph.
+    Time complexity: O((V+E)(C+1)) where C is the number of cycles.
+    
+    Args:
+        adj_list: Adjacency list representation of the graph.
+        max_cycle_length: Maximum allowed cycle length.
+        
+    Returns:
+        List of all cycles found.
+    """
+    n = len(adj_list)
+    cycles = []
+    seen = set()
+    
+    # Find SCCs to identify which nodes can be part of cycles
+    sccs = _tarjan_scc(adj_list)
+    
+    # Process each SCC that has more than one node
+    for scc in sccs:
+        if len(scc) < 2:
             continue
         
-        for neighbor in range(num_nodes):
-            if adj_matrix[node, neighbor] > 0.:
-                if neighbor == start and len(path) > 2:
-                    cycle = tuple(_normalize_cycle(path))
-                    if cycle not in local_visited:
-                        local_visited.add(cycle)
-                        cycles.append(path[:])
-                elif neighbor not in path:
-                    stack.append((neighbor, start, path))
+        # Build subgraph with only nodes in this SCC
+        scc_set = set(scc)
+        scc_adj = {node: [v for v in adj_list[node] if v in scc_set] for node in scc}
+        scc_min = min(scc)
+        
+        # Process each node in the SCC
+        for start in scc:
+            blocked = set()
+            block_map = defaultdict(list)
+            stack = [(start, [start])]
+            
+            while stack:
+                node, path = stack.pop()
+                if node not in blocked:
+                    blocked.add(node)
+                
+                found_cycle = False
+                for neighbor in scc_adj.get(node, []):
+                    if neighbor == start and len(path) > 2:
+                        # Found a cycle
+                        if len(path) <= max_cycle_length:
+                            cycle = tuple(_normalize_cycle(path))
+                            if cycle not in seen:
+                                seen.add(cycle)
+                                cycles.append(list(cycle))
+                        found_cycle = True
+                    elif neighbor not in path:
+                        if neighbor > scc_min and len(path) < max_cycle_length - 1:
+                            stack.append((neighbor, path + [neighbor]))
+                
+                if found_cycle:
+                    _unblock(node, blocked, block_map)
     
     return cycles
+
+def _unblock(node, blocked, block_map):
+    """Unblock a node in Johnson's algorithm."""
+    if node in blocked:
+        blocked.remove(node)
+    if node in block_map:
+        for neighbor in block_map[node]:
+            if neighbor in blocked:
+                _unblock(neighbor, blocked, block_map)
+        del block_map[node]
 
 
 class Featurizer(object):
@@ -722,52 +809,28 @@ class Featurizer(object):
         ).long()  # [N_atom, N_atom]
         return mask_features
 
-    def find_cycles(self, adj_matrix, max_workers=None):
+    def find_cycles(self, adj_matrix):
         """
-        Find all cycles in the adjacency matrix using parallel DFS.
+        Find all cycles in the adjacency matrix using Johnson's algorithm.
+        Time complexity: O((V+E)(C+1)) where C is the number of cycles.
         
         Args:
             adj_matrix: Adjacency matrix representing the graph.
-            max_workers: Maximum number of worker processes. If None, uses os.cpu_count().
         """
-        import os
-        
         max_cycle_length = self.max_cycle_length
         num_nodes = adj_matrix.shape[0]
         
-        # 并行处理每个起始节点
-        workers = max_workers or min(os.cpu_count(), num_nodes)
+        if num_nodes == 0:
+            return []
         
-        if workers > 1 and num_nodes > 10:
-            # 并行模式（使用线程池，避免 daemon 进程无法创建子进程的问题）
-            with ThreadPoolExecutor(max_workers=workers) as executor:
-                results = list(executor.map(
-                    lambda start: _dfs_from_start(start, adj_matrix, max_cycle_length),
-                    range(num_nodes)
-                ))
-            
-            # 合并所有结果并去重
-            all_cycles = []
-            seen = set()
-            for cycles in results:
-                for cycle in cycles:
-                    normalized = tuple(_normalize_cycle(cycle))
-                    if normalized not in seen:
-                        seen.add(normalized)
-                        all_cycles.append(cycle)
-            return all_cycles
-        else:
-            # 串行模式（节点数较少时）
-            visited = set()
-            cycles = []
-            for start in range(num_nodes):
-                result = _dfs_from_start(start, adj_matrix, max_cycle_length)
-                for cycle in result:
-                    normalized = tuple(_normalize_cycle(cycle))
-                    if normalized not in visited:
-                        visited.add(normalized)
-                        cycles.append(cycle)
-            return cycles
+        # Convert adjacency matrix to adjacency list (excluding self-loops)
+        adj_list = [[] for _ in range(num_nodes)]
+        for i in range(num_nodes):
+            for j in range(num_nodes):
+                if i != j and adj_matrix[i, j] > 0.:  # Exclude self-loops
+                    adj_list[i].append(j)
+        
+        return _johnson_cycles(adj_list, max_cycle_length)
 
     def get_cyclic_dists(self, res_on_cycle, n_res):
         assert max(res_on_cycle) < n_res
