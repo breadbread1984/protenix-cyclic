@@ -1,25 +1,3 @@
-# Copyright 2024 ByteDance and/or its affiliates.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from collections import defaultdict
-from typing import Optional, Union
-
-import numpy as np
-import torch
-from biotite.structure import Atom, AtomArray, get_residue_starts
-from sklearn.neighbors import KDTree
-
 from protenix.data.constants import get_all_elems, STD_RESIDUES, STD_RESIDUES_WITH_GAP
 from protenix.data.tokenizer import Token, TokenArray
 from protenix.data.utils import get_atom_level_token_mask, get_ligand_polymer_bond_mask
@@ -95,7 +73,6 @@ def _johnson_cycles(adj_list, max_cycle_length):
     Returns:
         List of all cycles found.
     """
-    n = len(adj_list)
     cycles = []
     seen = set()
     
@@ -110,20 +87,14 @@ def _johnson_cycles(adj_list, max_cycle_length):
         # Build subgraph with only nodes in this SCC
         scc_set = set(scc)
         scc_adj = {node: [v for v in adj_list[node] if v in scc_set] for node in scc}
-        scc_min = min(scc)
         
-        # Process each node in the SCC
+        # Start from each node in SCC to find all cycles
         for start in scc:
-            blocked = set()
-            block_map = defaultdict(list)
             stack = [(start, [start])]
             
             while stack:
                 node, path = stack.pop()
-                if node not in blocked:
-                    blocked.add(node)
                 
-                found_cycle = False
                 for neighbor in scc_adj.get(node, []):
                     if neighbor == start and len(path) > 2:
                         # Found a cycle
@@ -132,26 +103,11 @@ def _johnson_cycles(adj_list, max_cycle_length):
                             if cycle not in seen:
                                 seen.add(cycle)
                                 cycles.append(list(cycle))
-                        found_cycle = True
-                    elif neighbor not in path:
-                        if neighbor > scc_min and len(path) < max_cycle_length - 1:
-                            stack.append((neighbor, path + [neighbor]))
-                
-                if found_cycle:
-                    _unblock(node, blocked, block_map)
+                    elif neighbor not in path and len(path) < max_cycle_length:
+                        # Continue DFS for unvisited neighbors
+                        stack.append((neighbor, path + [neighbor]))
     
     return cycles
-
-def _unblock(node, blocked, block_map):
-    """Unblock a node in Johnson's algorithm."""
-    if node in blocked:
-        blocked.remove(node)
-    if node in block_map:
-        for neighbor in block_map[node]:
-            if neighbor in blocked:
-                _unblock(neighbor, blocked, block_map)
-        del block_map[node]
-
 
 class Featurizer(object):
     """
