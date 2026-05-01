@@ -677,7 +677,18 @@ class Featurizer(object):
             bond_mask_mat
         ).long()  # [N_atom, N_atom]
         return mask_features
-
+    
+    def normalize_cycle(self, cycle):
+        """标准化环：找lex最小旋转 + 方向"""
+        n = len(cycle)
+        # 所有旋转
+        rotations = [cycle[i:] + cycle[:i] for i in range(n)]
+        # 正向和反向
+        rev_rotations = [r[::-1] for r in rotations]
+        all_versions = rotations + rev_rotations
+        # 返回lex最小的
+        return min(all_versions)
+    
     def find_cycles(self, adj_matrix):
         """
         Find all cycles in the adjacency matrix using Johnson's algorithm.
@@ -694,6 +705,7 @@ class Featurizer(object):
                 continue
             subG = G.subgraph(scc_nodes).copy()
             cycles = list(nx.simple_cycles(subG))
+            cycles = [self.normalize_cycle(c) for c in cycles]
             all_cycles.extend(cycles)
         return all_cycles
     
