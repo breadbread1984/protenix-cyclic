@@ -19,137 +19,12 @@ import numpy as np
 import torch
 from biotite.structure import Atom, AtomArray, get_residue_starts
 from sklearn.neighbors import KDTree
+import networkx as nx
 
 from protenix.data.constants import get_all_elems, STD_RESIDUES, STD_RESIDUES_WITH_GAP
 from protenix.data.tokenizer import Token, TokenArray
 from protenix.data.utils import get_atom_level_token_mask, get_ligand_polymer_bond_mask
 from protenix.utils.geometry import angle_3p, random_transform
-
-
-def _normalize_cycle(cycle):
-    """Normalize a cycle by finding the lexicographically smallest rotation."""
-    min_index = cycle.index(min(cycle))
-    clockwise = cycle[min_index:] + cycle[:min_index]
-    counter_clockwise = cycle[min_index::-1] + cycle[:min_index:-1]
-    return min(clockwise, counter_clockwise)
-
-def _tarjan_scc(adj_list):
-    """
-    Tarjan's algorithm to find all Strongly Connected Components (SCCs).
-    Iterative implementation using explicit stack to avoid recursion limit.
-    
-    Args:
-        adj_list: Adjacency list representation of the graph.
-        
-    Returns:
-        List of SCCs, each SCC is a list of nodes.
-    """
-    n = len(adj_list)
-    index_counter = [0]
-    scc_stack = []  # Nodes in current DFS path
-    lowlink = {}
-    index = {}
-    on_stack = {}
-    sccs = []
-    
-    # Stack frames: (node, neighbor_iter, state)
-    # state: 0 = initial visit, 1 = processing neighbors
-    dfs_stack = []
-    
-    for start_node in range(n):
-        if start_node in index:
-            continue
-        
-        dfs_stack.append((start_node, 0, 0))
-        
-        while dfs_stack:
-            node, iter_pos, state = dfs_stack.pop()
-            neighbors = adj_list[node]
-            
-            if state == 0:
-                # First time visiting this node
-                index[node] = index_counter[0]
-                lowlink[node] = index_counter[0]
-                index_counter[0] += 1
-                scc_stack.append(node)
-                on_stack[node] = True
-                # Push back to process neighbors
-                dfs_stack.append((node, 0, 1))
-            else:
-                # Processing neighbors / done
-                while iter_pos < len(neighbors):
-                    neighbor = neighbors[iter_pos]
-                    iter_pos += 1
-                    
-                    if neighbor not in index:
-                        # Push current node back with updated iter_pos
-                        dfs_stack.append((node, iter_pos, 1))
-                        # Push neighbor to visit first
-                        dfs_stack.append((neighbor, 0, 0))
-                        break
-                    elif on_stack.get(neighbor, False):
-                        lowlink[node] = min(lowlink[node], index[neighbor])
-                else:
-                    # All neighbors processed, update lowlink and check for SCC root
-                    if lowlink[node] == index[node]:
-                        scc = []
-                        while True:
-                            w = scc_stack.pop()
-                            on_stack[w] = False
-                            scc.append(w)
-                            if w == node:
-                                break
-                        sccs.append(scc)
-    
-    return sccs
-
-def _johnson_cycles(adj_list, max_cycle_length):
-    """
-    Johnson's algorithm to find all elementary cycles in a graph.
-    Time complexity: O((V+E)(C+1)) where C is the number of cycles.
-    
-    Args:
-        adj_list: Adjacency list representation of the graph.
-        max_cycle_length: Maximum allowed cycle length.
-        
-    Returns:
-        List of all cycles found.
-    """
-    cycles = []
-    seen = set()
-    
-    # Find SCCs to identify which nodes can be part of cycles
-    sccs = _tarjan_scc(adj_list)
-    
-    # Process each SCC that has more than one node
-    for scc in sccs:
-        if len(scc) < 2:
-            continue
-        
-        # Build subgraph with only nodes in this SCC
-        scc_set = set(scc)
-        scc_adj = {node: [v for v in adj_list[node] if v in scc_set] for node in scc}
-        
-        # Start from each node in SCC to find all cycles
-        for start in scc:
-            stack = [(start, [start])]
-            
-            while stack:
-                node, path = stack.pop()
-                
-                for neighbor in scc_adj.get(node, []):
-                    if neighbor == start and len(path) > 2:
-                        # Found a cycle
-                        if len(path) <= max_cycle_length:
-                            cycle = tuple(_normalize_cycle(path))
-                            if cycle not in seen:
-                                seen.add(cycle)
-                                cycles.append(list(cycle))
-                    elif neighbor not in path and len(path) < max_cycle_length:
-                        # Continue DFS for unvisited neighbors
-                        stack.append((neighbor, path + [neighbor]))
-    
-    return cycles
 
 class Featurizer(object):
     """
@@ -160,8 +35,6 @@ class Featurizer(object):
         lig_atom_rename (bool): Boolean indicating whether rename atom name for ligand atoms
         include_discont_poly_poly_bonds (bool): Boolean indicating whether
                                         include discontinuous polymer-polymer bonds
-        r_max (int): Maximum relative position index. Used to limit the maximum cycle length
-                     in find_cycles to (2 * r_max + 1). Defaults to 32.
     """
 
     def __init__(
@@ -171,7 +44,6 @@ class Featurizer(object):
         ref_pos_augment: bool = True,
         lig_atom_rename: bool = False,
         include_discont_poly_poly_bonds: bool = False,
-        r_max: int = 32,
     ) -> None:
         self.cropped_token_array = cropped_token_array
 
@@ -179,7 +51,6 @@ class Featurizer(object):
         self.ref_pos_augment = ref_pos_augment
         self.lig_atom_rename = lig_atom_rename
         self.include_discont_poly_poly_bonds = include_discont_poly_poly_bonds
-        self.max_cycle_length = 2 * r_max + 1  # 环上任意两点最大距离为 floor(n/2)
 
     @staticmethod
     def encoder(
@@ -815,21 +686,16 @@ class Featurizer(object):
         Args:
             adj_matrix: Adjacency matrix representing the graph.
         """
-        max_cycle_length = self.max_cycle_length
-        num_nodes = adj_matrix.shape[0]
-        
-        if num_nodes == 0:
-            return []
-        
-        # Convert adjacency matrix to adjacency list (excluding self-loops)
-        adj_list = [[] for _ in range(num_nodes)]
-        for i in range(num_nodes):
-            for j in range(num_nodes):
-                if i != j and adj_matrix[i, j] > 0.:  # Exclude self-loops
-                    adj_list[i].append(j)
-        
-        return _johnson_cycles(adj_list, max_cycle_length)
-
+        all_cycles = []
+        for scc_nodes in nx.connected_components(G):
+            if len(scc_nodes) > 2 * 32 + 1:  # 跳过大SCC
+                print(f"跳过大SCC {len(scc_nodes)}节点")
+                continue
+            subG = G.subgraph(scc_nodes).copy()
+            cycles = list(nx.simple_cycles(subG))
+            all_cycles.extend(cycles)
+        return all_cycles
+    
     def get_cyclic_dists(self, res_on_cycle, n_res):
         assert max(res_on_cycle) < n_res
         i = np.arange(len(res_on_cycle)) # i.shape = (n,)
