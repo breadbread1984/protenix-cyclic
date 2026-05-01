@@ -686,7 +686,7 @@ class Featurizer(object):
         Args:
             adj_matrix: Adjacency matrix representing the graph.
         """
-        G = nx.from_numpy_array(adj)
+        G = nx.from_numpy_array(adj_matrix)
         all_cycles = []
         for scc_nodes in nx.connected_components(G):
             if len(scc_nodes) > 2 * 32 + 1:  # 跳过大SCC
