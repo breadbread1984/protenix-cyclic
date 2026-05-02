@@ -526,6 +526,7 @@ class Featurizer(object):
         bond_token_j = atom_idx_to_token_idx[bond_array[:,1]]
         full_adj_matrix[bond_token_i, bond_token_j] = 1
         full_adj_matrix[bond_token_j, bond_token_i] = 1
+        np.fill_diagonal(full_adj_matrix, 0)
         bond_features.update({'adj': torch.Tensor(full_adj_matrix)})
         return bond_features
 
