@@ -708,9 +708,11 @@ class Featurizer(object):
         G = nx.from_numpy_array(adj_matrix)
         all_cycles = []
         for scc_nodes in nx.connected_components(G):
+            '''
             if len(scc_nodes) > 2 * 32 + 1:  # 跳过大SCC
                 print(f"跳过大SCC {len(scc_nodes)}节点")
                 continue
+            '''
             subG = G.subgraph(scc_nodes).copy()
             cycles = list(nx.simple_cycles(subG))
             cycles = [self.normalize_cycle(c) for c in cycles]
