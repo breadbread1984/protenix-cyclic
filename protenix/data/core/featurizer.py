@@ -519,6 +519,14 @@ class Featurizer(object):
         token_adj_matrix[bond_token_i, bond_token_j] = 1
         token_adj_matrix[bond_token_j, bond_token_i] = 1
         bond_features = {"token_bonds": torch.Tensor(token_adj_matrix)}
+
+        # full adjacent matrix
+        full_adj_matrix = np.zeros((num_tokens, num_tokens), dtype=int)
+        bond_token_i = atom_idx_to_token_idx[bond_array[:,0]]
+        bond_token_j = atom_idx_to_token_idx[bond_array[:,1]]
+        full_adj_matrix[bond_token_i, bond_token_j] = 1
+        full_adj_matrix[bond_token_j, bond_token_i] = 1
+        bond_features = {'adj': torch.Tensor(full_adj_matrix)}
         return bond_features
 
     def get_extra_features(self) -> dict[str, torch.Tensor]:
@@ -752,25 +760,13 @@ class Featurizer(object):
         dist[mask > 0] *= -1
         return dist
 
-    def get_relative_position(self, token_adj_matrix, asym_id_pt, token_index_pt, residue_index_pt, atom_to_token_idx, is_protein, is_ligand, is_dna, is_rna):
-        adj = token_adj_matrix.detach().cpu().numpy()
+    def get_relative_position(self, adj_pt, asym_id_pt, token_index_pt, residue_index_pt, atom_to_token_idx):
+        adj = adj_pt.detach().cpu().numpy()
         asym_id = asym_id_pt.detach().cpu().numpy()
         token_index = token_index_pt.detach().cpu().numpy()
         residue_index = residue_index_pt.detach().cpu().numpy()
         atom_to_token_idx = atom_to_token_idx.detach().cpu().numpy()
-        is_protein = is_protein.detach().cpu().numpy()
-        is_ligand = is_ligand.detach().cpu().numpy()
-        is_dna = is_dna.detach().cpu().numpy()
-        is_rna = is_rna.detach().cpu().numpy()
 
-        is_poly = np.full((asym_id.shape[0],), False, dtype = np.bool)
-        is_poly[atom_to_token_idx] = (is_protein | is_dna | is_rna) & ~is_ligand
-        # 0) adjacent of extra bonds causing cyclic chain
-        same_chain = asym_id[:, None] == asym_id[None, :] # same chain
-        next_to_each_other = abs(token_index[:, None] - token_index[None, :]) == 1 # residues next to each other
-        between_poly = is_poly[:, None] & is_poly[None, :] # only between polymer residues
-        bonds_between_res = (same_chain & next_to_each_other & between_poly).astype(adj.dtype) # bonds_between_res.shape = (n_res, n_res)
-        adj = np.maximum(adj, bonds_between_res)
         # 1) find all cycles
         cycles = self.find_cycles(adj)
         # 2) get signed cyclic dists of each cyccle
@@ -812,15 +808,11 @@ class Featurizer(object):
         features.update(mask_features)
 
         dists_features = self.get_relative_position(
-            features['token_bonds'], 
+            features['adj'], 
             features['asym_id'], 
             features['token_index'], 
             features['residue_index'],
             features['atom_to_token_idx'],
-            features['is_protein'],
-            features['is_ligand'],
-            features['is_dna'],
-            features['is_rna'],
         )
         features.update(dists_features)
         return features
