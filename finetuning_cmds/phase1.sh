@@ -17,7 +17,7 @@ CUDA_VISIBLE_DEVICES=7 torchrun --nproc_per_node=1 runner/train.py \
 --train_crop_size 640 \
 --max_steps 60000 \
 --warmup_steps 1000 \
---lr 0.005 \
+--lr 0.00005 \
 --model.N_cycle 4 \
 --sample_diffusion.N_step 20 \
 --triangle_attention "cuequivariance" \
