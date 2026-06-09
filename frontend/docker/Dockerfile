@@ -41,6 +41,3 @@ COPY frontend/runner.py /app/frontend/runner.py
 RUN mkdir -p /root/protenix_output
 
 WORKDIR /app/frontend
-
-
-
