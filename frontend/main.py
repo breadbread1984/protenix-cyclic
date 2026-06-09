@@ -137,7 +137,7 @@ def create_interface(manager):
           seed = gr.Number(label = "seed", precision = 0, value = 1, minimum = 1, maximum = 1000)
           sample_num = gr.Number(label = "sample number", precision = 0, value = 5, minimum = 1, maximum = 100)
           step_num = gr.Number(label = "step number", precision = 0, value = 200, minimum = 1, maximum = 10000)
-        model = gr.Dropdown(label = "model", choices = ['protenix_base_default_v1.0.0', 'protenix_mini_default_v1.0.0', 'protenix_base_default_v2.0.0', 'protenix_mini_default_v2.0.0'], value = 'protenix_base_default_v2.0.0')
+        model = gr.Dropdown(label = "model", choices = ['protenix_base_default_v1.0.0', 'protenix_mini_default_v1.0.0', 'protenix_base_default_v2.0.0', 'protenix_mini_default_v2.0.0'], value = 'protenix_base_default_v1.0.0')
         with gr.Tabs():
           tabs = {device: {'tab': gr.TabItem(f'GPU {device}')} for device in list(manager.logs.keys())}
           for device, widgets in tabs.items():
