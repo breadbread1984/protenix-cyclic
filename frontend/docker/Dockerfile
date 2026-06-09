@@ -42,10 +42,5 @@ RUN mkdir -p /root/protenix_output
 
 WORKDIR /app/frontend
 
-EXPOSE 8082
 
-CMD ["python3", "main.py", \
-     "--host=0.0.0.0", \
-     "--port=8082", \
-     "--num_gpus=8", \
-     "--output_dir=/root/protenix_output"]
+
