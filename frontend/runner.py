@@ -12,8 +12,6 @@ class Runner(object):
     tmp_dir = "/tmp"
     out_json = join(tmp_dir, f'{stem}.json')
     cmds = [
-      "python3",
-      "-m",
       "protenix",
       "json",
       "--input",
@@ -60,8 +58,6 @@ class Runner(object):
     env = environ.copy()
     env['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
     cmds = [
-      "python3",
-      "-m",
       "protenix",
       "pred",
       "-i",
