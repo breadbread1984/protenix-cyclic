@@ -1,4 +1,4 @@
-FROM vemlp-cn-beijing.cr.volces.com/preset-images/pytorch:2.7.1-cu12.6.3-py3.11-ubuntu22.04
+FROM nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Asia/Shanghai \
@@ -9,29 +9,18 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        git \
-        g++ \
-        gcc \
-        libc6-dev \
-        make \
-        hmmer \
-        kalign \
+        python3 \
+        python3-pip \
+        python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CUTLASS
-RUN git clone -b v3.5.1 https://github.com/NVIDIA/cutlass.git /opt/cutlass
-
 WORKDIR /app
 
+RUN python3 -m pip install protenix --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple --break-system-packages
+
 # Install protenix and frontend dependencies
-RUN pip3 install --no-cache-dir \
-        protenix \
-        gradio>=4.0.0 \
-        gradio_rangeslider \
-        fastapi>=0.100.0 \
-        uvicorn>=0.20.0 \
-    -i https://pypi.org/simple
+RUN python3 -m pip install gradio gradio_rangeslider fastapi uvicorn --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple --break-system-packages
 
 # Copy frontend code
 COPY frontend/main.py /app/frontend/main.py
