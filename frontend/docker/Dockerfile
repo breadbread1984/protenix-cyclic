@@ -22,11 +22,6 @@ RUN python3 -m pip install protenix --extra-index-url https://pypi.tuna.tsinghua
 # Install protenix and frontend dependencies
 RUN python3 -m pip install gradio gradio_rangeslider fastapi uvicorn --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple --break-system-packages
 
-# Copy frontend code
-COPY frontend/main.py /app/frontend/main.py
-COPY frontend/runner.py /app/frontend/runner.py
-
 # Create output directory
 RUN mkdir -p /root/protenix_output
 
-WORKDIR /app/frontend

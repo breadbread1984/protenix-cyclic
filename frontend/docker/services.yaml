@@ -10,10 +10,12 @@ services:
     ports:
       - "8087:8087"
     volumes:
+      - ./frontend:/app/frontend
       # Mount output directory to persist prediction results
       - protenix_output:/root/protenix_output
       # Optional: mount a local directory for input PDB/CIF files
       # - /path/to/your/inputs:/app/inputs:ro
+    working_dir: /app/frontend
     deploy:
       resources:
         reservations:
