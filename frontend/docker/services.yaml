@@ -7,10 +7,6 @@ services:
       dockerfile: frontend/docker/Dockerfile
     image: protenix-frontend:latest
     container_name: protenix-frontend
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
     ports:
       - "8087:8087"
     volumes:
