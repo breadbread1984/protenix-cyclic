@@ -123,7 +123,7 @@ def create_interface(manager):
       confidences[basename(f)] = confidence
     yield manager.get_gpu_status(gpu_id), manager.get_gpu_logs(gpu_id), outputs, confidences
 
-  with gr.Block() as demo:
+  with gr.Blocks() as demo:
     with gr.Row():
       gr.Markdown("# Protenix manager tools")
     with gr.Row():
