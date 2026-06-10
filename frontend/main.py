@@ -148,7 +148,7 @@ def create_interface(manager):
                 widgets['status'] = gr.Textbox(label = "status", interactive = False)
                 widgets['logs'] = gr.Textbox(label = 'logs', lines = 10, interactive = False)
                 widgets['results'] = gr.File(file_count = "multiple", label = "design peptides", interactive = False)
-                widgets['confidences'] = gr.JSON(label = "confidences", interactive = False)
+                widgets['confidences'] = gr.JSON(label = "confidences")
       for device, widgets in tabs.items():
         widgets['submit'].click(
           partial(run_prediction, gpu_id = device),
