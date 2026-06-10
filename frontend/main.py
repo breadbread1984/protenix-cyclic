@@ -33,7 +33,6 @@ class Protenix(object):
     self.processes = {gpu_id: None for gpu_id in range(num_gpus)}
     self.status = {gpu_id: "idle" for gpu_id in range(num_gpus)}
     self.logs = {gpu_id: [] for gpu_id in range(num_gpus)}
-    self.binder_chain_ids = {}
     self.lock = threading.Lock()
     # start monitor thread
     self.monitor_thread = threading.Thread(target = self._monitor_processes)
@@ -48,10 +47,9 @@ class Protenix(object):
           process = self.processes.get(gpu_id)
         if process is not None:
           try:
-            log, binder_chain_id = next(process)
+            log = next(process)
             with self.lock:
               self.logs[gpu_id].append(log)
-              self.binder_chain_ids[gpu_id] = binder_chain_id
           except StopIteration:
             with self.lock:
               self.logs[gpu_id].append(f"{datetime.now()}: process finished")
