@@ -12,10 +12,16 @@ RUN apt-get update && \
         python3 \
         python3-pip \
         python3-dev \
+        wget \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+RUN mkdir -p /root/common
+
+RUN wget https://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif \
+     -O /root/common/components.cif
 
 RUN python3 -m pip install protenix --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple --break-system-packages
 
