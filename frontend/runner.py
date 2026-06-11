@@ -70,8 +70,10 @@ class Runner(object):
       model,
       *(["--use_template"] if use_template else []),
       *(["--use_msa"] if use_msa else []),
-      f"sample_diffusion.N_sample={sample_num}",
-      f"sample_diffusion.N_step={step_num}",
+      "--sample",
+      str(sample_num),
+      "--step",
+      str(step_num),
     ]
     proc = subprocess.Popen(
       cmds,
