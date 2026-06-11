@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 
 from os import environ, mkdir
-from os.path import splitext, join, exists
+from os.path import splitext, join, exists, basename
 import subprocess
 
 class Runner(object):
   def __init__(self,):
     pass
   def tojson(self, pdb_path,):
-    stem, ext = splitext(pdb_path)
+    stem, ext = splitext(basename(pdb_path))
     tmp_dir = "/tmp"
     out_json = join(tmp_dir, f'{stem}.json')
     cmds = [
