@@ -20,7 +20,7 @@ WORKDIR /app
 
 RUN mkdir -p /root/common
 
-RUN wget https://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif \
+RUN wget https://af3-dev.tos-cn-beijing.volces.com/release_data/components.v20240608.cif \
      -O /root/common/components.cif
 
 RUN python3 -m pip install protenix --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple --break-system-packages
