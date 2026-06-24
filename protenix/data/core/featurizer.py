@@ -763,12 +763,8 @@ class Featurizer(object):
         dist[mask > 0] *= -1
         return dist
 
-    def get_relative_position(self, adj_pt, asym_id_pt, token_index_pt, residue_index_pt, atom_to_token_idx):
+    def get_relative_position(self, adj_pt):
         adj = adj_pt.detach().cpu().numpy()
-        asym_id = asym_id_pt.detach().cpu().numpy()
-        token_index = token_index_pt.detach().cpu().numpy()
-        residue_index = residue_index_pt.detach().cpu().numpy()
-        atom_to_token_idx = atom_to_token_idx.detach().cpu().numpy()
 
         # 1) find all cycles
         cycles = self.find_cycles(adj)
@@ -810,13 +806,7 @@ class Featurizer(object):
         mask_features = self.get_mask_features()
         features.update(mask_features)
 
-        dists_features = self.get_relative_position(
-            features['adj'], 
-            features['asym_id'], 
-            features['token_index'], 
-            features['residue_index'],
-            features['atom_to_token_idx'],
-        )
+        dists_features = self.get_relative_position(features['adj'])
         features.update(dists_features)
         return features
 
